@@ -1,0 +1,68 @@
+pragma solidity ^0.6.0;
+/*here is an inheretence smart contract that can be used to distribute inheretence upon the death of a benefactor
+The code needs 3 key parts:
+1. Authorised Owner or benefactor
+2. List of beneficiary wallets and their respective inheritence
+3.
+
+*/
+contract inheritence {
+    address owner;
+    bool dead;
+    uint totalInheritence;
+
+//constructor below used to assign variables
+    constructor() public payable{ 
+        owner = msg.sender;
+        totalInheritence = msg.value;
+        dead = false;
+    }
+
+/*2 modifiers are needed to make sure the transaction is initiated by an authorised personnel 
+and that the owner of the inheretence is deceased*/
+    modifier AuthorisedOwner {
+        require(msg.sender == owner);
+        _;
+    }
+/*the above modifier requires the smart contract to be executed by the owner of the contract. 
+This can be changed to include other authorised users as well*/
+    modifier Ownerdeceased {
+        require(dead == true);
+        _;
+    }
+/*the above modifier checks if the benefactor is deceased. The contract should not be executed unless the benefactor is deceased*/
+
+    address [] beneficiaryWallets;
+    mapping(address =>uint) inheritence;
+/*the above code is to aggreagate beneficiaries and their wallets onto a list together with their inheritence amount. The value used is in ETH*/
+
+/*The function below will be used to enter beneficiaries' wallet address and their inheritence. This can only be done by an authorised user*/
+    function beneficiaries(address _wallet, uint _inheritenceAmount) public AuthorisedOwner {
+        beneficiaryWallets.push(_wallet);
+        inheritence[_wallet] = _inheritenceAmount;
+    }
+
+/*The function below is to ensure the allocated inheritence is less or equal to available amount*/
+    function availableInheritence() private AuthorisedOwner{
+        uint allocatedInheritence;
+        for (uint i=0; i<beneficiaryWallets.length; i++){
+            allocatedInheritence += inheritence[beneficiaryWallets[i]];
+        }
+        require(allocatedInheritence<=totalInheritence, "Contract cannot be executed. Allocated inheritence is bigger than available inheritence");
+    }
+
+/*The function below will use a loop to go through the list of wallets and distribute the inheritence */
+    function inheritenceDistribution() private Ownerdeceased {
+        for (uint i=0; i<beneficiaryWallets.length; i++) {
+            payable(beneficiaryWallets[i]).transfer(inheritence[beneficiaryWallets[i]]);
+        }
+    }
+
+/*The following fuction will be executed only by authorised personnel. 
+It will change the status of the benefactor to "dead" which then executes the contract*/
+    function execute() public AuthorisedOwner{
+        dead = true;
+        inheritenceDistribution();
+
+    }
+}
